@@ -89,11 +89,11 @@ def get_from_env(env_items, prefix=''):
     along with an optional prefix, and look them up in our environment variables
     '''
     keys = ['{}{}'.format(prefix, x) for x in env_items]
-    not_in_env = [x for x in keys if x in os.environ]
+    not_in_env = [x for x in keys if x not in os.environ]
     if len(not_in_env) > 0:
         error_msg = 'The following items are missing from our environment: {}'
         raise KeyError(error_msg.format(not_in_env))
-    pairs = [(k, os.environ[k]) for k in keys]
+    pairs = [(k, os.environ[prefix+k]) for k in env_items]
     return dict(pairs)
     
 
@@ -101,9 +101,9 @@ def get_keys_consul(keys, **overrides):
     conn = Consul(**overrides)
     all_results = []
     for key in keys:
-        x = conn.kv.get(key)
-        if x[1] != None:
-            all_results.append(x[1])
+        index, data = conn.kv.get(key)
+        if data:
+            all_results.append(data)
     item_tuples = [(x['Key'], x['Value']) for x in all_results]
     items = dict([(x[0], x[1].decode()) for x in item_tuples if x[1] != None])
     missing = [x for x in keys if x not in items]
