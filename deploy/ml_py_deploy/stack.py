@@ -2,6 +2,8 @@ import os.path
 import time
 import re
 
+import yaml
+
 from .shared import run_process, write_stack_yaml
 
 
@@ -10,7 +12,8 @@ def deploy_stack(stack_name, timeout):
 
 Dependencies -
     Parameter   - stack_name (str) - name of the stack deing deployed
-'''    
+                  timeout (int) - timeout in seconds to make sure a stack is up and running
+'''
     print("Deploying", stack_name)
     deploy_cmd = "docker deploy --compose-file docker-compose-swarm.yml --with-registry-auth %s" % (
         stack_name)
@@ -32,8 +35,6 @@ Dependencies -
                     "{} has been created and ready for the next stage".format(stack_file))
             else:
                 print("{} did not deploy correctly! Bummer Dude!".format(stack_name))
-
-    
 
 
 def get_env_keys():
@@ -139,7 +140,7 @@ Returns -
     boolean - if running tasks != replica count return true else return false
 '''
     get_current_running_tasks_command = "docker service ps --filter 'desired-state=running' --format '{{.Image}} {{.CurrentState}}' %s | grep \"%s\" | grep -v \"second\" | wc -l" % (service_name, service_info[
-                                                                                                                                                                              'image'])
+        'image'])
     current_running_tasks = run_process(get_current_running_tasks_command)
     print("{} has {} of {} running tasks for over a minute".format(
         service_name, current_running_tasks['output'], service_info['replicas']))
@@ -203,5 +204,44 @@ Returns -
     # Could not Pubslished  Port from format since .Endpoint.Ports is a list
     published_port = network_info.split(' ').pop(3)
     service_info = {"image": image, "replicas": replicas,
-                   "PublishedPort": published_port}
+                    "PublishedPort": published_port}
     return service_info
+
+
+def get_stacks(stack_file):
+    '''Purpose:  import contents of stack file into a dictionary
+
+Dependencies -
+    Parameter   -
+                    stack_file (str) - file location of stack file from deploy
+
+Returns -
+    stacks (dict) - a dictionary of stacks and Published Ports
+'''
+    stack_name = stack_file.replace('./', '').replace('.yaml', '')
+    services = {}
+    services[stack_name] = {}
+    with open(stack_file, 'r') as stream:
+        stacks = yaml.load(stream)
+    for stack, info in stacks.items():
+        if info['PublishedPort']:
+            service = {"name": stack, "PublishedPort": info['PublishedPort']}
+            services[stack_name][stack] = service
+    return services
+
+
+def get_swarm(cluster_DNS):
+    '''Purpose:  From cluster DNS record get tag for target group via a dictionary as a map
+
+        Dependencies -
+            Parameter - cluster_DNS (str) - cluster DNS record
+
+        Returns -
+            cluster_map[cluster_DNS] (dict) - AWS tag for swarm cluster
+    '''
+    cluster_map = {
+        'swarm-dev.mldev.cloud': {'swarmName': 'Dev-Alpha', 'Environment': 'dev'},
+        'swarm-int.mldev.cloud': {'swarmName': 'Integration-Alpha', 'Environment': 'qa'},
+        'swarm-prod.mldev.cloud': {'swarmName': 'Prod-Delta', 'Environment': 'prod'}
+    }
+    return cluster_map[cluster_DNS]

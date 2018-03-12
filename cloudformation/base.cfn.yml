@@ -26,16 +26,16 @@ Parameters:
     Default: 'sg-6c8a911b'
   SubnetAZ1:
     Type: 'String'
-    Default: 'subnet-5f4a6c29'
+    Default: 'subnet-5c4a6c2a'
   SubnetAZ2:
     Type: 'String'
-    Default: 'subnet-2f4e3c77'
+    Default: 'subnet-2e4e3c76'
   SubnetAZ3:
     Type: 'String'
-    Default: 'subnet-d31067f9'
+    Default: 'subnet-d21067f8'
   SubnetAZ4:
     Type: 'String'
-    Default: 'subnet-a5765198'
+    Default: 'subnet-af765192'
   TargetVpcId:
     Type: 'AWS::EC2::VPC::Id'
     Default: 'vpc-6b3cfe0c'
@@ -89,6 +89,30 @@ Resources:
           Value: !Ref BillingEnvId
         - Key: role
           Value: !Ref BillingRole
+  AppLoadBalancerListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+      LoadBalancerArn:
+        Ref: AppLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+  AppLoadBalancerListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+      - CertificateArn: !Ref Certificate
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: TargetGroup
+      LoadBalancerArn:
+        Ref: AppLoadBalancer
+      Port: '443'
+      Protocol: HTTPS
   DNSRecord:
     Type: AWS::Route53::RecordSet
     Properties:
@@ -98,3 +122,8 @@ Resources:
       Name: !Join ['.', [!Ref 'AWS::StackName', !Ref 'DnsZoneName']]
       Type: 'A'
       HostedZoneName: !Ref DnsZoneName
+
+Outputs:
+  StackUrl:
+    Description: Url to Deployed Stack
+    Value: !Join ['', ['https://', !Ref 'DNSRecord']]

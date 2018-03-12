@@ -10,8 +10,8 @@ from ml_py_deploy.stack import deploy_stack
 if len(sys.argv) != 4:
     message = """Usage: deploy/main.py STACK_NAME CLUSTER_DOMAIN_NAME TIMEOUT
 
-            CLUSTER_DOMAIN_NAME = DNS record that points to docker cluster
             STACK_NAME = name of the stack to give/use for this deployment
+            CLUSTER_DOMAIN_NAME = DNS record that points to docker cluster            
             TIMEOUT = time out on check to see if all the tasks are running for a stack (in minutes)
 
         ** NOTE that the deploy is expecting a valid docker compose file named \"docker-compose-swarm.yml\" and
