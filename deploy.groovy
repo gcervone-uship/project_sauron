@@ -14,39 +14,47 @@ switch(params.Swarm) {
     break
 }
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
-def artifactory_target = "Macmillan-Product-Builds/"
+def artifactory_target = "Macmillan-Product-Builds"
 def deploy_download_spec = """{
   "files": [
   {
-    "pattern": "${artifactory_target}/ml_unified_pipeline/master/\*.tgz",
-    "target": "./"
+    "pattern": "${artifactory_target}/ml_unified_pipeline/master/",
+    "target": "./",
+    "explode": "true"
   }
  ]
 }"""
 def repo_download_spec = """{
   "files": [
   {
-    "pattern": "${artifactory_target}/${repo}/${branch}/\*",
-    "target": "./${repo}"
+    "pattern": "${artifactory_target}/${repo}/${branch}/",
+    "target": "./"
   }
  ]
 }"""
 
 pipeline {
-  agent any
+  agent { label 'python3' }
   stages {
     stage('Get Artifacts') {
       steps {
         script {
+          sh "rm -fR *"
           artifactory_server.download(deploy_download_spec)
           artifactory_server.download(repo_download_spec)
+          sh "mv ml_unified_pipeline/master/* ./"
+          sh "ls -la ./"
+          sh "mv ./${repo}/${branch}/.key ./${repo}/"
+          sh "mv ./${repo}/${branch}/.images ./${repo}/"
+          sh "mv ./${repo}/${branch}/* ./${repo}/"
+          sh "ls -la ${repo}"
         }
-        sh "tar xfvz $(ls | grep tgz)"
       }
     }
     stage('Install Dependencies') {
       steps {
-        sh "sudo ./install_requirements.sh"
+        sh "chmod +x install_requirements.sh"
+        sh "./install_requirements.sh"
       }
     }
     stage("Build .ENV file"){
@@ -63,7 +71,7 @@ pipeline {
         }
         sh "export ARTIFACTORY_USER=${USERNAME}"
         sh "export ARTIFACTORY_PASSWORD=${PASSWORD}"
-        sh "cp ${repo}/docker-compose-swarm.yml docker-compose-swarm.yml"
+        sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
         sh "cat ${repo}/.images >> ./.env"
         sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
       }
