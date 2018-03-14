@@ -7,7 +7,7 @@ from ml_py_deploy.docker_connection import cluster_conn, cluster_close, ecr_logi
 from ml_py_deploy.stack import deploy_stack
 
 
-if len(sys.argv) != 4:
+if len(sys.argv) != 5:
     message = """Usage: deploy/main.py REGISTRY_TYPE STACK_NAME CLUSTER_DOMAIN_NAME TIMEOUT
 
             REGISTRY_TYPE = ecr / artifactory which registry are you pulling docker images from

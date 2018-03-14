@@ -32,16 +32,12 @@ def repo_download_spec = """{
   }
  ]
 }"""
-withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory-jenkins-user',
-            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']])
 
 pipeline {
   agent { label 'python3' }
 
   environment {
         CONSUL_HTTP_ADDR = '172.28.17.4:8500'
-        ARTIFACTORY_USER = '${USERNAME}'
-        ARTIFACTORY_PASSWORD = '${PASSWORD}'
     }
 
   stages {
@@ -73,9 +69,17 @@ pipeline {
     }
     stage("Deploying stack to Swarm"){
       steps {
-        sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
-        sh "cat ${repo}/.images >> ./.env"
-        sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
+        script {
+          withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory-jenkins-user',
+            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+          withEnv(['ARTIFACTORY_USER=${USERNAME}',
+             "ARTIFACTORY_PASSWORD=${PASSWORD}"
+            ]) {
+            sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
+            sh "cat ${repo}/.images >> ./.env"
+            sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
+          }
+        }
       }
     }
     stage("Creating ELBs Service URLs"){
