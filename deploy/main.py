@@ -3,7 +3,7 @@ import sys
 import os.path
 import random
 
-from ml_py_deploy.docker_connection import cluster_conn, cluster_close, ecr_login
+from ml_py_deploy.docker_connection import cluster_conn, cluster_close, ecr_login, artifactory_login
 from ml_py_deploy.stack import deploy_stack
 
 
