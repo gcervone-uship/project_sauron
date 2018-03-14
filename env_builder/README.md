@@ -35,6 +35,10 @@ The Consul library will read the following environment variables:
  * `CONSUL_HTTP_SSL`
  * `CONSUL_HTTP_SSL_VERIFY`
 
+The prefix option is also available for consul. The trailing slash for the prefix is optional:
+For example `-p 'dev/demo'` or `-p 'dev/demo/' would both allow for pulling values such as `dev/demo/API_PORT` OR `dev/demo/API_PROTOCOL`
+
+
 ## Keyfile
 Path to a keyfile. This file contains key value pairs
 

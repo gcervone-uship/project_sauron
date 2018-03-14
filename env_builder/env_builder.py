@@ -30,7 +30,7 @@ def get_cli_opts():
     parser.add_argument('-p', '--prefix',
                         required=False,
                         default='',
-                        help='Prefix for environment variables. Ex: "bamboo_"')
+                        help='Prefix for environment variables or consul path. Ex: "bamboo_" or "dev/"')
 
     return parser.parse_args()
 
@@ -97,15 +97,16 @@ def get_from_env(env_items, prefix=''):
     return dict(pairs)
     
 
-def get_keys_consul(keys, **overrides):
+def get_keys_consul(keys, prefix='', **overrides):
     conn = Consul(**overrides)
-    all_results = []
+    if len(prefix) > 0:
+        prefix = '{}/'.format(prefix.strip('/'))
+    items = {}
     for key in keys:
-        index, data = conn.kv.get(key)
+        index, data = conn.kv.get(prefix+key)
         if data:
-            all_results.append(data)
-    item_tuples = [(x['Key'], x['Value']) for x in all_results]
-    items = dict([(x[0], x[1].decode()) for x in item_tuples if x[1] != None])
+            if data['Value'] != None:
+                items[key] = data['Value'].decode()
     missing = [x for x in keys if x not in items]
     if len(missing) > 0:
         raise KeyError('The following items are missing: {}'.format(missing))
@@ -121,6 +122,6 @@ if __name__ == '__main__':
     elif args.type == 'environment':
         result = get_from_env(items, args.prefix)
     elif args.type == 'consul':
-        result = get_keys_consul(items)
+        result = get_keys_consul(items, args.prefix)
     args.destination.writelines(serialize_env(result)+'\n')
     
