@@ -20,7 +20,8 @@ Returns -
 '''
     print("Setting up connection to cluster", cluster_DNS, "at", socket_file)
     os.environ['DOCKER_HOST'] = "unix://" + socket_file
-    cmd = 'ssh -nNT -o "ExitOnForwardFailure=yes" -o "StrictHostKeyChecking=no" -L %s:/var/run/docker.sock docker@%s' % (socket_file, cluster_DNS)
+    cmd = 'ssh -nNT -o "ExitOnForwardFailure=yes" -o "StrictHostKeyChecking=no" -L %s:/var/run/docker.sock docker@%s' % (
+        socket_file, cluster_DNS)
     cluster_SSH_tunnel = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                           shell=True)
     print("checking for sockfile...")
@@ -66,7 +67,7 @@ Returns -
     ecr_client = boto3.client('ecr')
     response = ecr_client.get_authorization_token()
     ecr_auth_token = base64.b64decode(response['authorizationData'][
-                                    0]['authorizationToken'])
+        0]['authorizationToken'])
     ecr_auth_token = ecr_auth_token.decode("utf-8")
     ecr_auth_endpoint = response['authorizationData'][0]['proxyEndpoint']
     ecr_username, ecr_password = ecr_auth_token.split(':')
@@ -84,3 +85,29 @@ Returns -
         print("Docker repo login successful")
         print(ecr_login['output'])
         return True
+
+
+def artifactory_login(registry):
+    '''Purpose:  Login to artifactory Docker Registry
+Dependencies -
+    registry (str) - URL to artifactory registry
+
+Returns -
+    True or False (bool) - is the login to the ecr connected
+'''
+    if os.environ['ARTIFACTORY_USER'] != 'None' and os.environ['ARTIFACTORY_PASSWORD'] != 'None':
+        login_cmd = 'docker login --username %s --password %s %s' % (
+            os.environ['ARTIFACTORY_USER'], os.environ['ARTIFACTORY_PASSWORD'], registry)
+        print("Logging into the docker repo {}".format(registry))
+        docker_login = run_process(login_cmd)
+        if docker_login['error'] and ("ERROR" in docker_login['error']):
+            print("Docker repo login was not successful, please review prompt.")
+            print(docker_login['error'])
+            return False
+        else:
+            print("Docker repo login successful")
+            print(docker_login['output'])
+            return True
+    else:
+        print("Environment Variables for Artifactory Creds are not set")
+        return False
