@@ -32,9 +32,18 @@ def repo_download_spec = """{
   }
  ]
 }"""
+withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory-jenkins-user',
+            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']])
 
 pipeline {
   agent { label 'python3' }
+
+  environment {
+        CONSUL_HTTP_ADDR = '172.28.17.4:8500'
+        ARTIFACTORY_USER = '${USERNAME}'
+        ARTIFACTORY_PASSWORD = '${PASSWORD}'
+    }
+
   stages {
     stage('Get Artifacts') {
       steps {
@@ -59,18 +68,11 @@ pipeline {
     }
     stage("Build .ENV file"){
       steps {
-        sh "export CONSUL_HTTP_ADDR=http://172.28.17.4:8500"
         sh "python3 env_builder/env_builder.py -t consul -k ${repo}/.key -d ./.env -p ${params.Swarm}/${repo}"
       }
     }
     stage("Deploying stack to Swarm"){
       steps {
-        script {
-          withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory-jenkins-user',
-            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']])
-        }
-        sh "export ARTIFACTORY_USER=${USERNAME}"
-        sh "export ARTIFACTORY_PASSWORD=${PASSWORD}"
         sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
         sh "cat ${repo}/.images >> ./.env"
         sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
