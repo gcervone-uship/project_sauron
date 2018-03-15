@@ -20,7 +20,7 @@ Returns -
 '''
     print("Setting up connection to cluster", cluster_DNS, "at", socket_file)
     os.environ['DOCKER_HOST'] = "unix://" + socket_file
-    cmd = 'ssh -nNT -o ExitOnForwardFailure=yes -o StrictHostKeyChecking=no -L %s:/var/run/docker.sock docker@%s' % (
+    cmd = 'ssh -N -o ExitOnForwardFailure=yes -o StrictHostKeyChecking=No -L %s:/var/run/docker.sock docker@%s' % (
         socket_file, cluster_DNS)
     cluster_SSH_tunnel = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                           shell=True)
