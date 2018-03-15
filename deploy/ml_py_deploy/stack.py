@@ -30,7 +30,6 @@ Dependencies -
             stack_check_status = stack_check(stack_services, timeout)
             if stack_check_status:
                 print("{} successfully deployed! WOOT!".format(stack_name))
-                print(stack_services)
                 stack_file = write_stack_yaml(stack_name, stack_services)
                 print(
                     "{} has been created and ready for the next stage".format(stack_file))
