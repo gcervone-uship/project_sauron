@@ -57,6 +57,7 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      HealthCheckPath: "/status"
       Protocol: HTTP
       Port: !Ref PublishPort
       VpcId: !Ref TargetVpcId
