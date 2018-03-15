@@ -1,6 +1,7 @@
 import os.path
 import time
 import re
+import copy
 
 import yaml
 
@@ -15,7 +16,7 @@ Dependencies -
                   timeout (int) - timeout in seconds to make sure a stack is up and running
 '''
     print("Deploying", stack_name)
-    deploy_cmd = "docker deploy --compose-file docker-compose-swarm.yml --with-registry-auth %s" % (
+    deploy_cmd = "docker stack deploy --compose-file docker-compose-swarm.yml --with-registry-auth %s" % (
         stack_name)
     env_keys = get_env_keys()
     if env_keys:
@@ -89,10 +90,9 @@ Returns -
         with open(envFile, 'rt') as in_file:
             for line in in_file:
                 for key in keys:
-                    if line.startswith(key):
-                        envList = line.split('=')
-                        os.environ[envList[0]] = envList[1].rstrip()
-                        envs[envList[0]] = envList[1]
+                    envList = line.split('=')
+                    os.environ[envList[0]] = envList[1].rstrip('\n')
+                    envs[envList[0]] = envList[1]
 
         return envs
 
@@ -110,13 +110,13 @@ Dependencies -
 
 Returns -
     boolean - if all the service tasks are running within the time limit return true, else return false'''
-    serviceQueue = dict(stack)
+    serviceQueue = copy.deepcopy(stack)
     timer = 0
     while True:
         for service in stack.keys():
             ServiceStatus = check_service_status(
                 service, stack[service])
-            if ServiceStatus:
+            if ServiceStatus and service in serviceQueue:
                 del serviceQueue[service]
         if not serviceQueue or timer == timeout:
             break
@@ -200,11 +200,20 @@ Returns -
         service)
     service_info_output = run_process(get_service_info_command)
     service_info_list = service_info_output['output'].split('#')
-    image, replicas, network_info = service_info_list
-    # Could not Pubslished  Port from format since .Endpoint.Ports is a list
-    published_port = network_info.split(' ').pop(3)
-    service_info = {"image": image, "replicas": replicas,
+    if len(service_info_list) == 3:
+        image, replicas, network_info = service_info_list
+        # Could not Pubslished  Port from format since .Endpoint.Ports is a list
+        published_port = network_info.split(' ').pop(3)
+        service_info = {"image": image, "replicas": replicas,
                     "PublishedPort": published_port}
+    else:
+        get_service_info_command = 'docker service inspect %s --format=\'{{ ((index .Spec.Labels "com.docker.stack.image") 0)}}#{{.Spec.Mode.Replicated.Replicas}}\'' % (
+        service)
+        service_info_output = run_process(get_service_info_command)
+        service_info_list = service_info_output['output'].split('#')
+        image, replicas = service_info_list
+        service_info = {"image": image, "replicas": replicas}
+
     return service_info
 
 

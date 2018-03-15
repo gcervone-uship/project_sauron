@@ -54,11 +54,9 @@ pipeline {
           artifactory_server.download(deploy_download_spec)
           artifactory_server.download(repo_download_spec)
           sh "mv ml_unified_pipeline/master/* ./"
-          sh "ls -la ./"
           sh "mv ./${repo}/${branch}/.key ./${repo}/"
           sh "mv ./${repo}/${branch}/.images ./${repo}/"
           sh "mv ./${repo}/${branch}/* ./${repo}/"
-          sh "ls -la ${repo}"
         }
       }
     }
@@ -78,19 +76,16 @@ pipeline {
         script {
           sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
           sh "cat ${repo}/.images >> ./.env"
-          withCredentials([[
-            $class: 'UsernamePasswordMultiBinding',
+          sh "rm /var/lib/jenkins/.ssh/known_hosts"
+          withCredentials([[$class: 'UsernamePasswordMultiBinding',
             credentialsId: 'artifactory-jenkins-user',
-            accessKeyVariable: 'USERNAME', 
-            secretKeyVariable: 'PASSWORD']]) {
-            withEnv([
-              'ARTIFACTORY_USER=${USERNAME}',
-              "ARTIFACTORY_PASSWORD=${PASSWORD}"
-            ]) {
-              sshagent (credentials: ['${ssh_agent_id}']) {
-                sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
-              }
+            usernameVariable: 'USERNAME', 
+            passwordVariable: 'PASSWORD']]) {
+              env.ARTIFACTORY_USER="${USERNAME}"
+              env.ARTIFACTORY_PASSWORD="${PASSWORD}"
             }
+          sshagent (credentials: ["${ssh_agent_id}"]) {
+            sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
           }
         }
       }
@@ -98,19 +93,15 @@ pipeline {
     stage("Creating ELBs Service URLs"){
       steps {
         script {
-          withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: '${aws_id}',
-            usernameVariable: 'ACCESS_KEY', 
-            passwordVariable: 'SECRET_KEY']]) {
-            withEnv([
-              'AWS_ACCESS_KEY_ID=${ACCESS_KEY}',
-              "AWS_SECRET_ACCESS_KEY=${SECRET_KEY}",
-              "AWS_DEFAULT_REGION=us-east-1"
-            ]) {
+          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: "${aws_id}",
+            accessKeyVariable: 'ACCESS_KEY', 
+            secretKeyVariable: 'SECRET_KEY']]) {
+              env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
+              env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
+              env.AWS_DEFAULT_REGION="us-east-1"
               sh "python3 deploy/cf_main.py load ${stack_name} ${swarm_hostname}"
             }
-          }
         }
       }
     }
