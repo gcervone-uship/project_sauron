@@ -53,17 +53,23 @@ pipeline {
           sh "rm -fR *"
           artifactory_server.download(deploy_download_spec)
           artifactory_server.download(repo_download_spec)
-          sh "mv ml_unified_pipeline/master/* ./"
-          sh "mv ./${repo}/${branch}/.key ./${repo}/"
-          sh "mv ./${repo}/${branch}/.images ./${repo}/"
-          sh "mv ./${repo}/${branch}/* ./${repo}/"
+          sh (
+            """mv ml_unified_pipeline/master/* ./
+                mv ./${repo}/${branch}/.key ./${repo}/
+                mv ./${repo}/${branch}/.images ./${repo}/
+                mv ./${repo}/${branch}/* ./${repo}/
+            """
+          )
         }
       }
     }
     stage('Install Dependencies') {
       steps {
-        sh "chmod +x install_requirements.sh"
-        sh "./install_requirements.sh"
+        sh (
+            """chmod +x install_requirements.sh
+                ./install_requirements.sh
+            """
+          )
       }
     }
     stage("Build .ENV file"){
@@ -74,9 +80,12 @@ pipeline {
     stage("Deploying stack to Swarm") {
       steps {
         script {
-          sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
-          sh "cat ${repo}/.images >> ./.env"
-          sh "rm /var/lib/jenkins/.ssh/known_hosts"
+          sh (
+            """cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml
+                cat ${repo}/.images >> ./.env
+                rm /var/lib/jenkins/.ssh/known_hosts
+            """
+          )
           withCredentials([[$class: 'UsernamePasswordMultiBinding',
             credentialsId: 'artifactory-jenkins-user',
             usernameVariable: 'USERNAME', 
@@ -101,9 +110,19 @@ pipeline {
               env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
               env.AWS_DEFAULT_REGION="us-east-1"
               sh "python3 deploy/cf_main.py load ${stack_name} ${swarm_hostname}"
-            }
+          }
         }
       }
     }
   }
+}
+
+def shellCommandOutput(command) {
+    def uuid = UUID.randomUUID()
+    def filename = "cmd-${uuid}"
+    echo filename
+    sh ("${command} > ${filename}")
+    def result = readFile(filename).trim()
+    sh "rm ${filename}"
+    return result
 }

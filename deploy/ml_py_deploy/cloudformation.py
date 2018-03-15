@@ -42,11 +42,24 @@ def create_load_stacks(services, swarm):
             parameter_keys = get_parameters(template_body)
             parameters = create_parameters(
                 parameter_keys, parameter_values)
-            response = cloudformation_client.create_stack(
-                StackName=service.replace('_', '-'),
-                TemplateBody=template_body,
-                Parameters=parameters
-            )
+            try:
+                print(cloudformation_client.describe_stacks(
+                    StackName=service.replace('_', '-')))
+                stack_exists = True
+            except:
+                stack_exists = False
+            if stack_exists:
+                response = cloudformation_client.update_stack(
+                    StackName=service.replace('_', '-'),
+                    TemplateBody=template_body,
+                    Parameters=parameters
+                )
+            else:
+                response = cloudformation_client.create_stack(
+                    StackName=service.replace('_', '-'),
+                    TemplateBody=template_body,
+                    Parameters=parameters
+                )
             if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
                 print("Building " + service + " loadbalancer stack")
                 cf_stacks.append(service.replace('_', '-'))
