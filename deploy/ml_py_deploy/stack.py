@@ -236,7 +236,7 @@ Returns -
     with open(stack_file, 'r') as stream:
         stacks = yaml.load(stream)
     for stack, info in stacks.items():
-        if info['PublishedPort']:
+        if 'PublishedPort' in info:
             service = {"name": stack, "PublishedPort": info['PublishedPort']}
             services[stack_name][stack] = service
     return services
