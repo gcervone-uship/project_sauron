@@ -5,12 +5,18 @@ def swarm_hostname
 switch(params.Swarm) {
   case "dev":
     swarm_hostname = "swarm-dev.mldev.cloud"
+    ssh_agent_id = "docker-dev-swarm"
+    aws_id = "ml-jenkins-dev"
     break
   case "integration":
     swarm_hostname = "swarm-int.mldev.cloud"
+    ssh_agent_id = "docker-dev-swarm"
+    aws_id = "ml-jenkins-dev"
     break
   default:
     swarm_hostname = "swarm-prod.mldev.cloud"
+    ssh_agent_id = "docker-prod-swarm"
+    aws_id = "walkietalkie-prod"
     break
 }
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
@@ -67,24 +73,45 @@ pipeline {
         sh "python3 env_builder/env_builder.py -t consul -k ${repo}/.key -d ./.env -p ${params.Swarm}/${repo}"
       }
     }
-    stage("Deploying stack to Swarm"){
+    stage("Deploying stack to Swarm") {
       steps {
         script {
-          withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'artifactory-jenkins-user',
-            usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-          withEnv(['ARTIFACTORY_USER=${USERNAME}',
-             "ARTIFACTORY_PASSWORD=${PASSWORD}"
+          sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
+          sh "cat ${repo}/.images >> ./.env"
+          withCredentials([[
+            $class: 'UsernamePasswordMultiBinding',
+            credentialsId: 'artifactory-jenkins-user',
+            accessKeyVariable: 'USERNAME', 
+            secretKeyVariable: 'PASSWORD']]) {
+            withEnv([
+              'ARTIFACTORY_USER=${USERNAME}',
+              "ARTIFACTORY_PASSWORD=${PASSWORD}"
             ]) {
-            sh "cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml"
-            sh "cat ${repo}/.images >> ./.env"
-            sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
+              sshagent (credentials: ['${ssh_agent_id}']) {
+                sh "python3 deploy/main.py artifactory ${stack_name} ${swarm_hostname} 5"
+              }
+            }
           }
         }
       }
     }
     stage("Creating ELBs Service URLs"){
       steps {
-        sh "deploy/cf_main.py load ${stack_name} ${swarm_hostname}"
+        script {
+          withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: '${aws_id}',
+            usernameVariable: 'ACCESS_KEY', 
+            passwordVariable: 'SECRET_KEY']]) {
+            withEnv([
+              'AWS_ACCESS_KEY_ID=${ACCESS_KEY}',
+              "AWS_SECRET_ACCESS_KEY=${SECRET_KEY}",
+              "AWS_DEFAULT_REGION=us-east-1"
+            ]) {
+              sh "python3 deploy/cf_main.py load ${stack_name} ${swarm_hostname}"
+            }
+          }
+        }
       }
     }
   }
