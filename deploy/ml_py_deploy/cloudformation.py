@@ -43,17 +43,20 @@ def create_load_stacks(services, swarm):
             parameters = create_parameters(
                 parameter_keys, parameter_values)
             try:
-                print(cloudformation_client.describe_stacks(
-                    StackName=service.replace('_', '-')))
+                cloudformation_client.describe_stacks(
+                    StackName=service.replace('_', '-'))
                 stack_exists = True
             except:
                 stack_exists = False
             if stack_exists:
-                response = cloudformation_client.update_stack(
-                    StackName=service.replace('_', '-'),
-                    TemplateBody=template_body,
-                    Parameters=parameters
-                )
+                try:
+                    response = cloudformation_client.update_stack(
+                        StackName=service.replace('_', '-'),
+                        TemplateBody=template_body,
+                        Parameters=parameters
+                    )
+                except:
+                    print("There was no updated required for - " + service.replace('_', '-'))
             else:
                 response = cloudformation_client.create_stack(
                     StackName=service.replace('_', '-'),
