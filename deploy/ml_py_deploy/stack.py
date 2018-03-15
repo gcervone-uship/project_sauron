@@ -110,7 +110,10 @@ Dependencies -
 
 Returns -
     boolean - if all the service tasks are running within the time limit return true, else return false'''
-    serviceQueue = copy.deepcopy(stack)
+    serviceQueue = {}
+    for service in stack.keys():
+        if 'PublishedPort' in stack[service]:
+            serviceQueue[service] = stack[service]
     timer = 0
     while True:
         for service in stack.keys():
