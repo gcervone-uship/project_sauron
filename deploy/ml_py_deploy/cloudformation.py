@@ -57,8 +57,7 @@ def create_load_stacks(services, swarm):
                     )
                 except:
                     print("There was no updated required for - " + service.replace('_', '-'))
-                    response = {}
-                    response["ResponseMetadata"]["HTTPStatusCode"] = 200
+                    continue
             else:
                 response = cloudformation_client.create_stack(
                     StackName=service.replace('_', '-'),
