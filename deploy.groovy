@@ -83,7 +83,7 @@ pipeline {
           sh (
             """cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml
                 cat ${repo}/.images >> ./.env
-                rm /var/lib/jenkins/.ssh/known_hosts
+                [[ -e "/var/lib/jenkins/.ssh/known_hosts" ]] && rm /var/lib/jenkins/.ssh/known_hosts
             """
           )
           withCredentials([[$class: 'UsernamePasswordMultiBinding',
