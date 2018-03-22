@@ -1,0 +1,9 @@
+# Common conventions
+
+## Overloaded Naming
+s_ is prefixed to variables for clarity if they may overlap with library functions
+or are just incredibly overloaded terms. It can stand for sauron_ or single_
+Really its up to your imagination.
+For Example: s_item instead of item
+
+I commonly use n_ for new
