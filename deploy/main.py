@@ -32,7 +32,7 @@ if (os.path.exists('./docker-compose-swarm.yml') == False) and (os.path.exists('
 timeout_seconds = timeout_minutes * 60
 
 if registry == 'artifactory':
-    artifactory_domain = "registry.shared.macmillan.cloud"
+    artifactory_domain = "registry.sh.mml.cloud"
     registry_map = {
         'swarm-dev.mldev.cloud': 'docker-dev.',
         'swarm-int.mldev.cloud': 'docker-int.',
