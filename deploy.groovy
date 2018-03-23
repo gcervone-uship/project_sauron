@@ -83,7 +83,7 @@ pipeline {
           sh (
             """cp ${repo}/docker-compose-swarm.yml ./docker-compose-swarm.yml
                 cat ${repo}/.images >> ./.env
-                [[ -e "/var/lib/jenkins/.ssh/known_hosts" ]] && rm /var/lib/jenkins/.ssh/known_hosts
+                [[ -e '/var/lib/jenkins/.ssh/known_hosts' ]] && rm /var/lib/jenkins/.ssh/known_hosts
             """
           )
           withCredentials([[$class: 'UsernamePasswordMultiBinding',
@@ -115,14 +115,4 @@ pipeline {
       }
     }
   }
-}
-
-def shellCommandOutput(command) {
-    def uuid = UUID.randomUUID()
-    def filename = "cmd-${uuid}"
-    echo filename
-    sh ("${command} > ${filename}")
-    def result = readFile(filename).trim()
-    sh "rm ${filename}"
-    return result
 }

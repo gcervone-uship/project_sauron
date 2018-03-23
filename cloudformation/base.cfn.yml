@@ -1,5 +1,37 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Base Template for deploying a dockerized application'
+Mappings:
+  EnvironmentSettings:
+    Dev-Alpha:
+      BillingEnvironment: 'dev'
+      SecurityGroups: 'sg-6c8a911b'
+      SubnetAZ1: 'subnet-5c4a6c2a'
+      SubnetAZ2: 'subnet-2e4e3c76'
+      SubnetAZ3: 'subnet-d21067f8'
+      SubnetAZ4: 'subnet-af765192'
+      TargetVpcId: 'vpc-6b3cfe0c'
+      DnsZoneName: 'mldev.cloud.'
+      Certificate: 'arn:aws:acm:us-east-1:999447569257:certificate/f52216d5-601a-45b8-9748-939b8356f1b0'
+    Integration-Alpha:
+      BillingEnvironment: 'qa'
+      SecurityGroups: 'sg-6c8a911b'
+      SubnetAZ1: 'subnet-5c4a6c2a'
+      SubnetAZ2: 'subnet-2e4e3c76'
+      SubnetAZ3: 'subnet-d21067f8'
+      SubnetAZ4: 'subnet-af765192'
+      TargetVpcId: 'vpc-6b3cfe0c'
+      DnsZoneName: 'mldev.cloud.'
+      Certificate: 'arn:aws:acm:us-east-1:999447569257:certificate/f52216d5-601a-45b8-9748-939b8356f1b0'
+    Prod-Delta:
+      BillingEnvironment: 'prod'
+      SecurityGroups: 'sg-4598c334'
+      SubnetAZ1: 'subnet-1c612a6a'
+      SubnetAZ2: 'subnet-84cbaddc'
+      SubnetAZ3: 'subnet-34613109'
+      SubnetAZ4: 'subnet-c3dc44e9'
+      TargetVpcId: 'vpc-fe769c99'
+      DnsZoneName: 'macmillantech.com.'
+      Certificate: 'arn:aws:acm:us-east-1:517541443881:certificate/2d7c6589-51a9-4368-b52a-bccc60f51f61'
 
 Parameters:
   Swarm:
@@ -10,8 +42,6 @@ Parameters:
     Type: Number
   BillingDivision:
     Type: String
-  BillingEnvironment:
-    Type: String
   BillingProject:
     Type: String
   BillingEnvId:
@@ -20,31 +50,6 @@ Parameters:
     Type: String
   TargetGroupTags:
     Type: CommaDelimitedList
-  SecurityGroups:
-    Description: 'Security Group to use for the Application Load Balancer'
-    Type: 'String'
-    Default: 'sg-6c8a911b'
-  SubnetAZ1:
-    Type: 'String'
-    Default: 'subnet-5c4a6c2a'
-  SubnetAZ2:
-    Type: 'String'
-    Default: 'subnet-2e4e3c76'
-  SubnetAZ3:
-    Type: 'String'
-    Default: 'subnet-d21067f8'
-  SubnetAZ4:
-    Type: 'String'
-    Default: 'subnet-af765192'
-  TargetVpcId:
-    Type: 'AWS::EC2::VPC::Id'
-    Default: 'vpc-6b3cfe0c'
-  DnsZoneName:
-    Type: String
-    Default: 'mldev.cloud.'
-  Certificate:
-    Type: String
-    Default: 'arn:aws:acm:us-east-1:999447569257:certificate/f52216d5-601a-45b8-9748-939b8356f1b0'
   AppLoadBalancerScheme:
     Description: 'Specifies if the Load Balancer is internal or internet-facing'
     Type: String
@@ -60,7 +65,7 @@ Resources:
       HealthCheckPath: "/status"
       Protocol: HTTP
       Port: !Ref PublishPort
-      VpcId: !Ref TargetVpcId
+      VpcId: !FindInMap [ EnvironmentSettings, !Ref Swarm, TargetVpcId ]
       Name: !Ref 'AWS::StackName'
       Tags:
         - Key: swarm
@@ -73,19 +78,19 @@ Resources:
       Name: !Ref 'AWS::StackName'
       Scheme: !Ref AppLoadBalancerScheme
       SecurityGroups:
-        - !Ref SecurityGroups
+        - !FindInMap [ EnvironmentSettings, !Ref Swarm, SecurityGroups ]
       Subnets:
-        - !Ref SubnetAZ1
-        - !Ref SubnetAZ2
-        - !Ref SubnetAZ3
-        - !Ref SubnetAZ4        
+        - !FindInMap [ EnvironmentSettings, !Ref Swarm, SubnetAZ1 ]
+        - !FindInMap [ EnvironmentSettings, !Ref Swarm, SubnetAZ2 ]
+        - !FindInMap [ EnvironmentSettings, !Ref Swarm, SubnetAZ3 ]
+        - !FindInMap [ EnvironmentSettings, !Ref Swarm, SubnetAZ4 ]      
       Tags:
         - Key: division 
           Value: !Ref BillingDivision
         - Key: project 
           Value: !Ref BillingProject
         - Key: environment 
-          Value: !Ref BillingEnvironment
+          Value: !FindInMap [ EnvironmentSettings, !Ref Swarm, BillingEnvironment ]
         - Key: envid 
           Value: !Ref BillingEnvId
         - Key: role
@@ -105,7 +110,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       Certificates:
-      - CertificateArn: !Ref Certificate
+      - CertificateArn: !FindInMap [ EnvironmentSettings, !Ref Swarm, Certificate ]
       DefaultActions:
       - Type: forward
         TargetGroupArn:
@@ -120,9 +125,9 @@ Resources:
       AliasTarget: 
         DNSName: !GetAtt AppLoadBalancer.DNSName
         HostedZoneId: !GetAtt AppLoadBalancer.CanonicalHostedZoneID
-      Name: !Join ['.', [!Ref 'AWS::StackName', !Ref 'DnsZoneName']]
+      Name: !Join ['.', [!Ref 'AWS::StackName', !FindInMap [ EnvironmentSettings, !Ref Swarm, DnsZoneName ]]]
       Type: 'A'
-      HostedZoneName: !Ref DnsZoneName
+      HostedZoneName: !FindInMap [ EnvironmentSettings, !Ref Swarm, DnsZoneName ]
 
 Outputs:
   StackUrl:

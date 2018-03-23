@@ -33,7 +33,6 @@ def create_load_stacks(services, swarm):
                 swarm['swarmName'],
                 services[docker_stack_name][service]["PublishedPort"],
                 "academic",
-                swarm['Environment'],
                 docker_stack_name,
                 'NONE',
                 'NONE',
