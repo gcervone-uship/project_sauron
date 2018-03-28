@@ -8,13 +8,15 @@ VALID_PREFIXES = ['Parameters', 'Outputs']
 
 
 def _create_stack(stack_name, stack_template, build_parameters, cfn_client):
-    EntityAlreadyExistsException = cfn_client.meta.client.exceptions.EntityAlreadyExistsException
+    AlreadyExistsException = cfn_client.meta.client.exceptions.AlreadyExistsException
     try:
         res = cfn_client.create_stack(StackName = stack_name,
                          TemplateBody = stack_template,
                          Parameters = build_parameters)
+        waiter = cfn_client.meta.client.get_waiter('stack_create_complete')
+        waiter.wait(StackName=stack_name)
         stack_obj = cfn_client.Stack(res.stack_name)
-    except EntityAlreadyExistsException as e:
+    except AlreadyExistsException as e:
         return None
     return stack_obj
 
@@ -24,7 +26,10 @@ def _update_stack(stack_name, stack_template, build_parameters, cfn_client):
     try:
         raw = stack_object.update(TemplateBody = stack_template,
                             Parameters = build_parameters)
-    except ValidationError as e:
+        waiter = cfn_client.meta.client.get_waiter('stack_update_complete')
+        waiter.wait(StackName=stack_name)
+        
+    except ClientError as e:
         pass
     # Reload the object even if we didn't change it
     # We may have passed in an arn instead of name
@@ -35,17 +40,18 @@ def _update_stack(stack_name, stack_template, build_parameters, cfn_client):
         
 def create_cfn_stack(stack_name,
                  stack_template,
-                 build_parameters={},
+                 build_parameters=[],
                  cfn_client = boto3.resource('cloudformation')):
     '''
     TODO: Wrap permissions exceptions so we can fall back if we've got default values
     '''
+    build_params = [{'ParameterKey': x.key, 'ParameterValue': x.value} for x in build_parameters]
     v_stack_name = stack_name.replace('_', '-')
-    res = _create_stack(v_stack_name, stack_template, build_parameters, cfn_client)
+    res = _create_stack(v_stack_name, stack_template, build_params, cfn_client)
     if res:
         return res
     else:
-        return _update_stack(v_stack_name, stack_template, build_parameters, cfn_client)
+        return _update_stack(v_stack_name, stack_template, build_params, cfn_client)
     
 
 def _get_cfn_stack(stack_name, cfn_client):
