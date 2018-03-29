@@ -19,7 +19,7 @@ pipeline {
         stage('Create Artifact') {
             steps {
                 print "Creating Artifact: ${artifact_name}"
-                sh "tar cfvz ${artifact_name} install_requirements.sh env_builder deploy cloudformation"
+                sh "tar cfvz ${artifact_name} install_requirements.sh env_builder deploy cloudformation py_sauron"
             }
         }
         stage('Publish to Artifactory') {
