@@ -83,14 +83,12 @@ pipeline {
                 env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
                 env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
                 env.AWS_DEFAULT_REGION="us-east-1"
-                sh "python3 py_sauron/cfn_to_consul.py -n ${stack_name}-data -s cfn_stack --build-template ./${repo}/data.cfn.yml"
+                sh "python3 py_sauron/cfn_to_consul.py -p ${stack_name} --build-template ./${repo}/data.cfn.yml --build-stack-name ${stack_name}-data"
               }
            }
         }
       }
     }   
-		
-		
 		
     stage("Build .ENV file"){
       steps {

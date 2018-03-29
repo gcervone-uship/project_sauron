@@ -74,10 +74,10 @@ def _get_cfn_stack(stack_name, cfn_client):
     res = chain(outputs, params)
     return Result(result=res)
         
-def _get_template(template_file):
-    with open(template_file) as f:
-        tem = f.read().replace('!','')
+def _get_template(template_yaml):
+    tem = template_yaml.replace('!','')
     return yaml.load(tem)
+
 
 def _make_template_items(template_dict):
     item_acc = []
@@ -94,8 +94,8 @@ def _make_template_items(template_dict):
         
     return item_acc
 
-def get_cfn_template(template_file):
-    t_dict = _get_template(template_file)
+def get_cfn_template(template_yaml):
+    t_dict = _get_template(template_yaml)
     r_items = _make_template_items(t_dict)
     return Result(result=r_items)
 
