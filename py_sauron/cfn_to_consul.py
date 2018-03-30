@@ -7,13 +7,10 @@ import argparse
 import yaml
 
 
-class CloudformationAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if namespace.build_template and namespace.build_stack_name:
-            setattr(namespace, self.dest, values)
-        else:
-            parser.error('Both --build-template and --build-stack-name are required to build a stack')
 class RequireSourceName(argparse.Action):
+    '''
+    Action for argparse to require that --source-name has been provided
+    '''
     def __call__(self, parser, namespace, values, option_string=None):
         if values == 'cfn_stack':
             if self.source_name:
@@ -68,6 +65,11 @@ def get_cli_opts():
 
 
 def handle_stack(stack_name, src_prefix):
+    '''
+    Query cloudformation for our stack, grab all items matching the src_prefix
+    (most likely Output) update the prefix to match the stack name, and return our
+    final items
+    '''
     stack_res = get_cfn_stack(stack_name)
     if stack_res.result:
         _tack_items = list(stack_res.result)
@@ -80,6 +82,12 @@ def handle_stack(stack_name, src_prefix):
 
 
 def build_stack(build_name, raw_template, source_items=[]):
+    '''
+    Pull the items from our cloudformation template, and get therequired parameters
+    for our template. Fill in the required items from our source_items list, and build the
+    template. Return the boto Stack object of the new stack
+    '''
+    
     all_template_items = get_cfn_template(raw_template).result
     _emplate_params = get_by_prefix('Parameters', all_template_items).result
     template_params = map(drop_prefix, _emplate_params)
@@ -89,6 +97,8 @@ def build_stack(build_name, raw_template, source_items=[]):
 
 if __name__ == '__main__':
     args = get_cli_opts()
+
+    # Check over some of our provided arguments, and make sure we have any dependent arguments
     if args.source == 'consul' and args.source_name:
         raise KeyError('source_name is invalid for consul source')
     if args.build_template and not args.build_stack_name:
@@ -105,15 +115,25 @@ if __name__ == '__main__':
 
         
     if args.build_template:
+        '''
+        take our source items, fill them into the parameters of the template
+        build the template, and return the items from the Outputs section of
+        the template
+        '''
         fill_with = map(drop_prefix, _ource_items)
         raw_template = args.build_template.read()
         raw = build_stack(args.build_stack_name, raw_template, fill_with)
         stack_items = handle_stack(args.build_stack_name, 'Outputs')
         source_items = list(stack_items)
     else:
+        '''
+        if we're not building a stack, pass the items directly from the source
+        to the destination
+        '''
         source_items = _ource_items
 
-        
+
+    # Update the items with the new prefix if required
     if args.destination_prefix:
         dest_prefix = [lambda x: new_prefix(x, args.destination_prefix)]
     else:
@@ -123,7 +143,9 @@ if __name__ == '__main__':
         dest_actions = [is_consul_prefix,
                         put_consul]
 
+    # join the actions to be performed on the prefix, and the actions for the destination
     actions = dest_prefix + dest_actions
 
+    # Perform our accumulated actions our our source_items
     for x in operate(item_action(source_items, actions)):
         print(x)
