@@ -88,7 +88,7 @@ Returns -
         envs = {}
         with open(envFile, 'rt') as in_file:
             for line in in_file:
-                if line:
+                if line.strip():
                     for key in keys:
                         envList = line.split('=')
                         os.environ[envList[0]] = envList[1].rstrip('\n')
