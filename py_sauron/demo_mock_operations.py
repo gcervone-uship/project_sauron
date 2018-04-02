@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 from primitives import item_primitives
 from primitives.item_primitives import Result, Item
 from primitives.item_primitives import get_by_prefix, drop_prefix, dedup_prefix_keys, fill_values
+from plugins.cloudformation import get_cfn_stack
 
 
 d_template_items = [Item(prefix='Parameters', key='Has'),
@@ -17,15 +19,16 @@ d_keyfile_items = [Item(key='Hass', value='maybe'),
 cfn_results = Result(result=iter(d_template_items)).result
 keyfile_results = Result(result=iter(d_keyfile_items)).result
 
-__n_required = get_by_prefix('Parameters', cfn_results).result
-_fn_required = dedup_prefix_keys(__n_required)
-cfn_required = map(drop_prefix, _fn_required.result)
+template_params = get_by_prefix('Parameters', cfn_results).result
+cfn_required = map(drop_prefix, template_params)
 
-_eyfile_items = dedup_prefix_keys(keyfile_results)
-keyfile_items = map(drop_prefix, _eyfile_items.result)
+deduplicated_source_items = dedup_prefix_keys(keyfile_results).result
+keyfile_items = map(drop_prefix, deduplicated_source_items)
 
-
+# fill in the required paramaters for the cloudformation template
+# fill_values will raise an exception by default if there are missing params
 filled = fill_values(cfn_required, keyfile_items)
 
 for x in filled.result:
     print(x)
+
