@@ -1,6 +1,7 @@
 from itertools import chain, groupby
 from functools import reduce
 from collections import defaultdict
+
 from utils import filter_both, not_none
 
 class SauronPrimitive(object):
@@ -8,16 +9,16 @@ class SauronPrimitive(object):
         rep = {x: getattr(self, x) for x in self.__slots__ if getattr(self, x)}
         return '{} {}'.format(self.__class__.__name__, rep)
     def __iter__(self):
-        '''
+        """
         Add on an __iter__ method that gives us a single item iterator
         of ourself. This makes it easier for writing things that only have to deal with a single item
         This is mainly for being able to handle results and invalids without having to worry about if they
         are a single item or multiple items
-        '''
+        """
         yield self
     
 class Result(SauronPrimitive):
-    '''
+    """
     Result objects represent the state of an action taken on an item
     It uses the following attributes:
       * result (successfully handled items)
@@ -36,7 +37,7 @@ class Result(SauronPrimitive):
         For example, you might want to retry if you recieved a socket error while trying to connect to consul
       * output
         The formatted output of an action. For example, serializing something to json or yaml.
-    '''
+    """
     __slots__ = ['result', 'invalid', 'raw', 'exception', 'retry', 'output']
     def __init__(self, result=None, invalid=None, raw=None, exception=None, retry=False, output=None):
         self.result = result
@@ -65,10 +66,10 @@ class Item(SauronPrimitive):
     def __hash__(self):
         return hash((self.prefix, self.key, self.value))
     def clone(self,key=None, value=None, prefix=None, extra=None, drop=[]):
-        '''
+        """
         Make a new copy of the item allowing for updated attributes
         We can also pass a list or string with an item to drop (Set to None in the new object)
-        '''
+        """
         cl = self.__class__
         if key:
             n_key = key
@@ -111,9 +112,9 @@ def join_prefix(s_item, sep=''):
     return n_item
 
 def split_prefix(item, prefix, sep=''):
-    '''
+    """
     Take an item with a None prefix, a prefix, and optionally a seperator
-    '''
+    """
     left = prefix+sep
     if item.prefix != None:
         return Result(invalid=item)
@@ -123,11 +124,11 @@ def split_prefix(item, prefix, sep=''):
     n_item = item.clone(key=n_key, prefix=prefix)
     return n_item
 def split_by_sep(s_item, sep):
-    '''
+    """
     Take an item with an empty prefix and a seperator, and generate a prefix
     If a seperator is repeated, only use the final section as the key, the rest will be joined back together
     with the seperator to form the prefix
-    '''
+    """
     key = s_item.key
     value = s_item.value
     prefix = s_item.prefix
@@ -195,14 +196,14 @@ def dedup_prefix_keys(s_items, invalid_fatal=True):
                   invalid = invalid)
 
 def fill_values(required_items, source_items, invalid_fatal=True):
-    '''
+    """
     Make a dictionary with values of None out of our required items
     go through the source items and fill in all our keys
     This will give us a dictionary containing our default values
     Now we just need to iterate over our known items, and overwrite any defaults
     Once we've got the resulting dictionary, we can check to make sure we don't have any
     values of none remaining
-    '''
+    """
     result = defaultdict(lambda x: None)
     for r_item in required_items:
         result[r_item.key] = r_item.value
@@ -213,23 +214,23 @@ def fill_values(required_items, source_items, invalid_fatal=True):
         if src_key in result and src_value != None:
             result[src_key] = src_value
 
-    _alid = []
-    _nvalid = []
+    base_valid = []
+    base_invalid = []
     for k, v in result.items():
         if v:
-            _alid.append(Item(key=k, value=v))
+            base_valid.append(Item(key=k, value=v))
         else:
-            _nvalid.append(Item(key=k, value=v))
-    if _nvalid == []:
+            base_invalid.append(Item(key=k, value=v))
+    if base_invalid == []:
         invalid = None
     else:
         if invalid_fatal:
             raise ValueError('Required Values Missing: {}'.format(_nvalid))
         invalid = _nvalid
-    if _alid == []:
+    if base_valid == []:
         valid = None
     else:
-        valid = _alid
+        valid = base_valid
     return Result(result = valid,
                   invalid = invalid)
 

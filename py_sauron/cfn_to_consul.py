@@ -1,11 +1,9 @@
-from primitives.item_primitives import item_action, get_by_prefix, new_prefix, operate, fill_values, drop_prefix
-from plugins.cloudformation import get_cfn_stack, create_cfn_stack, _make_template_items, get_cfn_template
-from data_sources.consul_kv import put_consul, get_consul_by_prefix, is_consul_prefix
-from primitives.item_primitives import Item
-
 import argparse
 import yaml
 
+from primitives.item_primitives import Item, item_action, get_by_prefix, new_prefix, operate, fill_values, drop_prefix
+from plugins.cloudformation import get_cfn_stack, create_cfn_stack, _make_template_items, get_cfn_template
+from plugins.consul_kv import put_consul, get_consul_by_prefix, is_consul_prefix
 
 class RequireSourceName(argparse.Action):
     '''
@@ -65,15 +63,14 @@ def get_cli_opts():
 
 
 def handle_stack(stack_name, src_prefix):
-    '''
+    """
     Query cloudformation for our stack, grab all items matching the src_prefix
     (most likely Output) update the prefix to match the stack name, and return our
     final items
-    '''
+    """
     stack_res = get_cfn_stack(stack_name)
     if stack_res.result:
-        _tack_items = list(stack_res.result)
-        stack_items = get_by_prefix(src_prefix, _tack_items).result
+        stack_items = get_by_prefix(src_prefix, stack_res.result).result
         operations = [lambda x: new_prefix(x, stack_name)]
         final = item_action(stack_items, operations)
     else:
@@ -82,17 +79,18 @@ def handle_stack(stack_name, src_prefix):
 
 
 def build_stack(build_name, raw_template, source_items=[]):
-    '''
+    """
     Pull the items from our cloudformation template, and get therequired parameters
     for our template. Fill in the required items from our source_items list, and build the
     template. Return the boto Stack object of the new stack
-    '''
+    """
     
     all_template_items = get_cfn_template(raw_template).result
-    _emplate_params = get_by_prefix('Parameters', all_template_items).result
-    template_params = map(drop_prefix, _emplate_params)
-    filled = fill_values(template_params, source_items).result
+    all_template_params = get_by_prefix('Parameters', all_template_items).result
+    dropped_prefix = map(drop_prefix, all_template_params)
+    filled = fill_values(dropped_prefix, source_items).result
     raw = create_cfn_stack(build_name, raw_template, filled)
+    return raw
     
 
 if __name__ == '__main__':
@@ -109,28 +107,28 @@ if __name__ == '__main__':
     if args.source == 'cfn_stack':
         stack_name = args.source_name
         stack_prefix = args.source_prefix
-        _ource_items = handle_stack(stack_name, stack_prefix)
+        base_source_items = handle_stack(stack_name, stack_prefix)
     elif args.source == 'consul':
-        _ource_items = get_consul_by_prefix(Item(prefix=args.source_prefix)).result
+        base_source_items = get_consul_by_prefix(Item(prefix=args.source_prefix)).result
 
         
     if args.build_template:
-        '''
+        """
         take our source items, fill them into the parameters of the template
         build the template, and return the items from the Outputs section of
         the template
-        '''
-        fill_with = map(drop_prefix, _ource_items)
+        """
+        fill_with = map(drop_prefix, base_source_items)
         raw_template = args.build_template.read()
         raw = build_stack(args.build_stack_name, raw_template, fill_with)
         stack_items = handle_stack(args.build_stack_name, 'Outputs')
         source_items = list(stack_items)
     else:
-        '''
+        """
         if we're not building a stack, pass the items directly from the source
         to the destination
-        '''
-        source_items = _ource_items
+        """
+        source_items = base_source_items
 
 
     # Update the items with the new prefix if required

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from data_sources.consul_kv import get_consul, put_consul, is_consul_prefix, get_consul_by_prefix
+from plugins.consul_kv import get_consul, put_consul, is_consul_prefix, get_consul_by_prefix
 from primitives.item_primitives import Item,  make_valid, item_action, new_prefix, drop_prefix, get_by_prefix, inspector
 
 demo_items = [Item(key='demo_key', value='n'),
