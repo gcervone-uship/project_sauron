@@ -88,10 +88,11 @@ Returns -
         envs = {}
         with open(envFile, 'rt') as in_file:
             for line in in_file:
-                for key in keys:
-                    envList = line.split('=')
-                    os.environ[envList[0]] = envList[1].rstrip('\n')
-                    envs[envList[0]] = envList[1]
+                if line:
+                    for key in keys:
+                        envList = line.split('=')
+                        os.environ[envList[0]] = envList[1].rstrip('\n')
+                        envs[envList[0]] = envList[1]
 
         return envs
 
