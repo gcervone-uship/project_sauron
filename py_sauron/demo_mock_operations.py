@@ -2,7 +2,6 @@
 from primitives import item_primitives
 from primitives.item_primitives import Result, Item
 from primitives.item_primitives import get_by_prefix, drop_prefix, dedup_prefix_keys, fill_values
-from plugins.cloudformation import get_cfn_stack
 
 
 d_template_items = [Item(prefix='Parameters', key='Has'),
@@ -19,7 +18,7 @@ d_keyfile_items = [Item(key='Hass', value='maybe'),
 cfn_results = Result(result=iter(d_template_items)).result
 keyfile_results = Result(result=iter(d_keyfile_items)).result
 
-template_params = get_by_prefix('Parameters', cfn_results).result
+template_params = get_by_prefix(cfn_results, 'Parameters').result
 cfn_required = map(drop_prefix, template_params)
 
 deduplicated_source_items = dedup_prefix_keys(keyfile_results).result
