@@ -15,22 +15,21 @@ def is_consul_prefix(s_item):
     """
 
     if s_item.prefix is None:
-        return Result(result = s_item)
+        return Result(result=s_item)
     if s_item.prefix[0] != '/':
-        return Result(result = s_item)
-    return Result(invalid = s_item)
+        return Result(result=s_item)
+    return Result(invalid=s_item)
 
 def _put_consul(s_item, conn):
     n_item = join_prefix(s_item, '/')
     try:
-        r = conn.kv.put(n_item.key, s_item.value)
-        if r:
+        raw = conn.kv.put(n_item.key, s_item.value)
+        if raw:
             return Result(s_item)
-        else:
-            return Result(invalid=s_item)
-    except (ConsulException, socket.error) as e:
+        return Result(invalid=s_item)
+    except (ConsulException, socket.error) as consul_exception:
         return Result(invalid=s_item,
-                      exception=e)
+                      exception=consul_exception)
 
 def _get_consul(s_item, conn, recurse=False):
     """
@@ -47,13 +46,13 @@ def _get_consul(s_item, conn, recurse=False):
 
     try:
         index, data = conn.kv.get(c_key, recurse=recurse)
-    except (ConsulException, socket.error) as e:
+    except (ConsulException, socket.error) as consul_exception:
         return Result(invalid=s_item,
-                      exception=e)
-    
+                      exception=consul_exception)
+
     def to_item(intermediate_res):
         return  Item(key=intermediate_res['Key'],
-                     value = intermediate_res['Value'].decode())
+                     value=intermediate_res['Value'].decode())
     if data:
         if recurse:
             r_items = map(to_item, data)
@@ -61,7 +60,7 @@ def _get_consul(s_item, conn, recurse=False):
             r_items = to_item(data)
         result = map(lambda x: split_by_sep(x, CONSUL_SEP), r_items)
         return Result(result)
-    return Result(invalid=item)
+    return Result(invalid=s_item)
 
 def get_consul_by_prefix(s_item, conn=Consul()):
     """
@@ -81,5 +80,3 @@ def put_consul(s_item, conn=Consul()):
     Write an item to consul
     """
     return _put_consul(s_item, conn)
-
-        

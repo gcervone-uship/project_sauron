@@ -3,7 +3,7 @@ import re
 
 from utils import filter_both
 from primitives.item_primitives import Result, join_prefix
-    
+
 def _keyfile_valid_key(s_item):
     valid_regex = r'^[0-9A-Z\_]+$'
     return re.match(valid_regex, s_item.key)
@@ -41,14 +41,13 @@ def serialize_shell(items):
     # prepare an output with all of our valid items
     to_lines = map(lambda x: 'export {}={}'.format(x.key, x.value), valid)
     output = '\n'.join(to_lines)
-    
+
     return Result(result=result,
                   invalid=invalid,
                   output=output)
 
 def write_keyfiles(items,
                    destination,
-                   separator='=',
                    overwrite=True):
     if overwrite:
         mode = 'w'
@@ -59,5 +58,3 @@ def write_keyfiles(items,
     with open(destination, mode) as f:
         f.write(result.output)
     return result
-    
-    
