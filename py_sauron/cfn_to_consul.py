@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 
 from primitives.item_primitives import Item, item_action, get_by_prefix, new_prefix
