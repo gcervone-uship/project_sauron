@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 from plugins.consul_kv import get_consul, put_consul, is_consul_prefix, get_consul_by_prefix
-from primitives.item_primitives import Item,  make_valid, item_action, new_prefix
+from primitives.item_primitives import Item, make_valid, item_action, new_prefix
 
 demo_items = [Item(key='demo_key', value='n'),
-             Item(key='prefix_demo', value='x', prefix='prefix'),
-             Item(key='prefix_demo2', value='y', prefix='prefix'),
-             Item(key='prefix_demo3', value='z', prefix='prefix'),              
-             Item(key='invalid_prefix_demo', value='should fail', prefix='/failme')]
+              Item(key='prefix_demo', value='x', prefix='prefix'),
+              Item(key='prefix_demo2', value='y', prefix='prefix'),
+              Item(key='prefix_demo3', value='z', prefix='prefix'),
+              Item(key='invalid_prefix_demo', value='should fail', prefix='/failme')]
 
 demo_list = [lambda s_item: make_valid(s_item),
              is_consul_prefix,
@@ -23,4 +23,3 @@ source_items = get_consul_by_prefix(Item(prefix='prefix')).result
 
 for x in item_action(source_items, copy_to_new_prefix):
     print('{}'.format(x))
-

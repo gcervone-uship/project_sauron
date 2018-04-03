@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-from primitives import item_primitives
 from primitives.item_primitives import Result, Item
 from primitives.item_primitives import get_by_prefix, drop_prefix, dedup_prefix_keys, fill_values
 
 
 d_template_items = [Item(prefix='Parameters', key='Has'),
                     Item(key='Hass', value='maybse'),
-                    Item(prefix='Parameters',key='Hasss'),
+                    Item(prefix='Parameters', key='Hasss'),
                     Item(prefix='Parameters', key='Has_another_key')]
 
 d_keyfile_items = [Item(key='Hass', value='maybe'),
@@ -30,4 +29,3 @@ filled = fill_values(cfn_required, keyfile_items)
 
 for x in filled.result:
     print(x)
-

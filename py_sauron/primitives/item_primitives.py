@@ -1,10 +1,15 @@
-from itertools import chain, groupby
+from itertools import groupby
 from functools import reduce, wraps
 from collections import defaultdict
 
-from utils import filter_both, not_none
+from utils import filter_both
 
 class SauronPrimitive(object):
+    __slots__ = []
+    """
+    Base class for Sauron Objects. Mainly to turn things into iterables, and automatically generate
+    a nice __repr__
+    """
     def __repr__(self):
         rep = {x: getattr(self, x) for x in self.__slots__ if getattr(self, x)}
         return '{} {}'.format(self.__class__.__name__, rep)
@@ -16,7 +21,7 @@ class SauronPrimitive(object):
         are a single item or multiple items
         """
         yield self
-    
+
 class Result(SauronPrimitive):
     """
     Result objects represent the state of an action taken on an item
@@ -44,11 +49,14 @@ class Result(SauronPrimitive):
         self.invalid = invalid
         self.raw = raw
         self.exception = exception
-        self.retry = False
+        self.retry = retry
         self.output = output
 
 
 class Item(SauronPrimitive):
+    """
+    Sauron Item Primitive. This is the fundamental class that will be utilized in py_sauron
+    """
     __slots__ = ['key', 'value', 'prefix', 'extra']
     def __init__(self, key=None, value=None, prefix=None, extra=None):
         self.key = key
@@ -65,12 +73,12 @@ class Item(SauronPrimitive):
         return (self.prefix, self.key, self.value) > (other.prefix, other.key, other.value)
     def __hash__(self):
         return hash((self.prefix, self.key, self.value))
-    def clone(self,key=None, value=None, prefix=None, extra=None, drop=[]):
+    def clone(self, key=None, value=None, prefix=None, extra=None, drop=[]):
         """
         Make a new copy of the item allowing for updated attributes
         We can also pass a list or string with an item to drop (Set to None in the new object)
         """
-        cl = self.__class__
+        clone = self.__class__
         if key:
             n_key = key
         elif 'key' in drop:
@@ -95,36 +103,34 @@ class Item(SauronPrimitive):
             n_extra = None
         else:
             n_extra = self.extra
-            
-        return cl(key = n_key,
-                  value = n_value,
-                  prefix = n_prefix,
-                  extra = n_extra)
 
-def accept_none_item(f):
-    @wraps(f)
+        return clone(key=n_key,
+                     value=n_value,
+                     prefix=n_prefix,
+                     extra=n_extra)
+
+def accept_none_item(func):
+    @wraps(func)
     def wrapped(s_item, *args, **kwargs):
         if s_item is None:
-            return f(Item(), *args, **kwargs)
-        else:
-            return f(s_item, *args, **kwargs)
+            return func(Item(), *args, **kwargs)
+        return func(s_item, *args, **kwargs)
     return wrapped
 
-def accept_none_items(f):
-    @wraps(f)
+def accept_none_items(func):
+    @wraps(func)
     def wrapped(s_items, *args, **kwargs):
         if s_items is None:
-            return f([], *args, **kwargs)
-        else:
-            return f(s_items, *args, **kwargs)
+            return func([], *args, **kwargs)
+        return func(s_items, *args, **kwargs)
     return wrapped
-            
+
 @accept_none_item
 def join_prefix(s_item, sep=''):
     prefix = s_item.prefix
     key = s_item.key
     if prefix != None:
-        n_item = s_item.clone(key= '{}{}{}'.format(prefix, sep, key), prefix=None)
+        n_item = s_item.clone(key='{}{}{}'.format(prefix, sep, key), prefix=None)
     else:
         n_item = s_item
     return n_item
@@ -136,9 +142,9 @@ def split_prefix(s_item, prefix, sep=''):
     """
     left = prefix+sep
     if s_item.prefix != None:
-        return Result(invalid=item)
-    if not s_item.prefix.startswith(start):
-        return Result(invalid=item)
+        return Result(invalid=s_item)
+    if not s_item.prefix.startswith(left):
+        return Result(invalid=s_item)
     n_key = s_item.key.lstrip(left)
     n_item = s_item.clone(key=n_key, prefix=prefix)
     return n_item
@@ -151,15 +157,14 @@ def split_by_sep(s_item, sep):
     with the seperator to form the prefix
     """
     key = s_item.key
-    value = s_item.value
     prefix = s_item.prefix
-    if prefix != None:
+    if prefix is not None:
         return Result(invalid=s_item)
     spl = key.split(sep)
     n_key = spl[-1]
     n_prefix = sep.join(spl[:-1])
-    n_item = s_item.clone(key = n_key,
-                          prefix = n_prefix)
+    n_item = s_item.clone(key=n_key,
+                          prefix=n_prefix)
     return n_item
 
 @accept_none_item
@@ -189,21 +194,22 @@ def item_action(s_items, actions=[make_valid]):
     per_item = lambda elem: reduce(lambda l, r: action_on_result(r, l), actions, elem)
     return map(per_item, s_items)
 
-def action_on_result(pred, ob):
-    if type(ob) == Result:
-        if ob.result:
-            return pred(ob.result)
-        return ob
-    if type(ob) == Item:
-        return  pred(ob)
+def action_on_result(pred, s_obj):
+    if isinstance(s_obj, Result):
+        if s_obj.result:
+            return pred(s_obj.result)
+        return s_obj
+    if isinstance(s_obj, Item):
+        return  pred(s_obj)
     # Just drop it through if we don't specifically know how to handle it.
-    return ob
+    return s_obj
 
 @accept_none_items
 def get_by_prefix(s_items, prefix):
     result, invalid = filter_both(lambda x: x.prefix == prefix, s_items)
-    return Result(result = result,
-                  invalid = invalid)
+    return Result(result=result,
+                  invalid=invalid)
+
 @accept_none_items
 def dedup_items(s_items):
     return map(lambda x: x[0], groupby(s_items))
@@ -214,15 +220,15 @@ def dedup_prefix_keys(s_items, invalid_fatal=True):
     invalid = []
     dedupped = dedup_items(s_items)
     item_groups = {k: list(g) for k, g in groupby(dedupped, key=lambda x: (x.prefix, x.key))}
-    for k, v in item_groups.items():
-        if len(v) == 1:
-            valid.extend(v)
+    for prefix, key in item_groups.items():
+        if key:
+            valid.extend(key)
         else:
-            invalid.extend(v)
-    if len(invalid) > 0 and invalid_fatal:
+            invalid.extend(key)
+    if invalid and invalid_fatal:
         raise KeyError('Overlapping Key Value Pairs: {}'.format(invalid))
-    return Result(result = valid,
-                  invalid = invalid)
+    return Result(result=valid,
+                  invalid=invalid)
 
 def fill_values(required_items, source_items, invalid_fatal=True):
     """
@@ -245,23 +251,23 @@ def fill_values(required_items, source_items, invalid_fatal=True):
 
     base_valid = []
     base_invalid = []
-    for k, v in result.items():
-        if v:
-            base_valid.append(Item(key=k, value=v))
+    for key, value in result.items():
+        if value:
+            base_valid.append(Item(key=key, value=value))
         else:
-            base_invalid.append(Item(key=k, value=v))
+            base_invalid.append(Item(key=key, value=value))
     if base_invalid == []:
         invalid = None
     else:
         if invalid_fatal:
             raise ValueError('Required Values Missing: {}'.format(base_invalid))
-        invalid = _nvalid
+        invalid = base_invalid
     if base_valid == []:
         valid = None
     else:
         valid = base_valid
-    return Result(result = valid,
-                  invalid = invalid)
+    return Result(result=valid,
+                  invalid=invalid)
 
 def inspector(ins):
     print('---Current: {}'.format(ins))

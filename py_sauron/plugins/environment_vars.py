@@ -21,5 +21,4 @@ def lookup_env(s_item):
         d_item = Item(key=env_key, value=env_value)
     if d_item.value:
         return Result(result=d_item)
-    else:
-        return Result(invalid=d_item)
+    return Result(invalid=d_item)
