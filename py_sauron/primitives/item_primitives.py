@@ -1,5 +1,5 @@
 from itertools import chain, groupby
-from functools import reduce
+from functools import reduce, wraps
 from collections import defaultdict
 
 from utils import filter_both, not_none
@@ -100,8 +100,26 @@ class Item(SauronPrimitive):
                   value = n_value,
                   prefix = n_prefix,
                   extra = n_extra)
-        
 
+def accept_none_item(f):
+    @wraps(f)
+    def wrapped(s_item, *args, **kwargs):
+        if s_item is None:
+            return f(Item(), *args, **kwargs)
+        else:
+            return f(s_item, *args, **kwargs)
+    return wrapped
+
+def accept_none_items(f):
+    @wraps(f)
+    def wrapped(s_items, *args, **kwargs):
+        if s_items is None:
+            return f([], *args, **kwargs)
+        else:
+            return f(s_items, *args, **kwargs)
+    return wrapped
+            
+@accept_none_item
 def join_prefix(s_item, sep=''):
     prefix = s_item.prefix
     key = s_item.key
@@ -111,18 +129,21 @@ def join_prefix(s_item, sep=''):
         n_item = s_item
     return n_item
 
-def split_prefix(item, prefix, sep=''):
+@accept_none_item
+def split_prefix(s_item, prefix, sep=''):
     """
     Take an item with a None prefix, a prefix, and optionally a seperator
     """
     left = prefix+sep
-    if item.prefix != None:
+    if s_item.prefix != None:
         return Result(invalid=item)
-    if not item.prefix.startswith(start):
+    if not s_item.prefix.startswith(start):
         return Result(invalid=item)
-    n_key = item.key.lstrip(left)
-    n_item = item.clone(key=n_key, prefix=prefix)
+    n_key = s_item.key.lstrip(left)
+    n_item = s_item.clone(key=n_key, prefix=prefix)
     return n_item
+
+@accept_none_item
 def split_by_sep(s_item, sep):
     """
     Take an item with an empty prefix and a seperator, and generate a prefix
@@ -141,23 +162,29 @@ def split_by_sep(s_item, sep):
                           prefix = n_prefix)
     return n_item
 
+@accept_none_item
 def new_prefix(s_item, prefix):
     n_item = s_item.clone(prefix=prefix)
     return n_item
 
+@accept_none_item
 def drop_prefix(s_item):
     n_item = s_item.clone(drop='prefix')
     return n_item
 
+@accept_none_item
 def drop_value(s_item):
     return s_item.clone(drop='value')
 
+@accept_none_item
 def make_valid(s_item):
     return Result(result=s_item)
 
+@accept_none_item
 def make_invalid(s_item):
     return Result(invalid=s_item)
 
+@accept_none_items
 def item_action(s_items, actions=[make_valid]):
     per_item = lambda elem: reduce(lambda l, r: action_on_result(r, l), actions, elem)
     return map(per_item, s_items)
@@ -172,14 +199,16 @@ def action_on_result(pred, ob):
     # Just drop it through if we don't specifically know how to handle it.
     return ob
 
-def get_by_prefix(prefix, s_items):
-    x = filter_both(lambda x: x.prefix == prefix, s_items)
-    return Result(result = x['match'],
-                  invalid = x['no_match'])
-
+@accept_none_items
+def get_by_prefix(s_items, prefix):
+    result, invalid = filter_both(lambda x: x.prefix == prefix, s_items)
+    return Result(result = result,
+                  invalid = invalid)
+@accept_none_items
 def dedup_items(s_items):
     return map(lambda x: x[0], groupby(s_items))
 
+@accept_none_items
 def dedup_prefix_keys(s_items, invalid_fatal=True):
     valid = []
     invalid = []
@@ -225,7 +254,7 @@ def fill_values(required_items, source_items, invalid_fatal=True):
         invalid = None
     else:
         if invalid_fatal:
-            raise ValueError('Required Values Missing: {}'.format(_nvalid))
+            raise ValueError('Required Values Missing: {}'.format(base_invalid))
         invalid = _nvalid
     if base_valid == []:
         valid = None
@@ -238,5 +267,6 @@ def inspector(ins):
     print('---Current: {}'.format(ins))
     return ins
 
+@accept_none_items
 def operate(s_items):
     return [x for x in s_items]

@@ -72,11 +72,11 @@ def _get_cfn_stack(stack_name, cfn_client):
         return Result()
     stack_params = stack_object.parameters
     stack_outputs = stack_object.outputs
-    if _arams:
+    if stack_params:
         params = map(lambda x: Item(key=x['ParameterKey'], value=x['ParameterValue'], prefix='Parameters'), stack_params)
     else:
         params = []
-    if _utputs:
+    if stack_outputs:
         outputs = map(lambda x: Item(key=x['OutputKey'], value=x['OutputValue'], prefix='Outputs'), stack_outputs)
     else:
         outputs = []

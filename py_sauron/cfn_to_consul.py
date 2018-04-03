@@ -70,7 +70,7 @@ def handle_stack(stack_name, src_prefix):
     """
     stack_res = get_cfn_stack(stack_name)
     if stack_res.result:
-        stack_items = get_by_prefix(src_prefix, stack_res.result).result
+        stack_items = get_by_prefix(stack_res.result, src_prefix).result
         operations = [lambda x: new_prefix(x, stack_name)]
         final = item_action(stack_items, operations)
     else:
@@ -86,7 +86,7 @@ def build_stack(build_name, raw_template, source_items=[]):
     """
     
     all_template_items = get_cfn_template(raw_template).result
-    all_template_params = get_by_prefix('Parameters', all_template_items).result
+    all_template_params = get_by_prefix(all_template_items, 'Parameters').result
     dropped_prefix = map(drop_prefix, all_template_params)
     filled = fill_values(dropped_prefix, source_items).result
     raw = create_cfn_stack(build_name, raw_template, filled)
@@ -118,7 +118,13 @@ if __name__ == '__main__':
         build the template, and return the items from the Outputs section of
         the template
         """
-        fill_with = map(drop_prefix, base_source_items)
+        
+        if base_source_items is None:
+            available_source_items = []
+        else:
+            available_source_items = base_source_items
+            
+        fill_with = map(drop_prefix, available_source_items)
         raw_template = args.build_template.read()
         raw = build_stack(args.build_stack_name, raw_template, fill_with)
         stack_items = handle_stack(args.build_stack_name, 'Outputs')

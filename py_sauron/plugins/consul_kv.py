@@ -15,15 +15,15 @@ def is_consul_prefix(s_item):
     """
 
     if s_item.prefix is None:
-        return Result(result = item)
+        return Result(result = s_item)
     if s_item.prefix[0] != '/':
-        return Result(result = item)
-    return Result(invalid = item)
+        return Result(result = s_item)
+    return Result(invalid = s_item)
 
 def _put_consul(s_item, conn):
     n_item = join_prefix(s_item, '/')
     try:
-        r = conn.kv.put(n_item.key, item.value)
+        r = conn.kv.put(n_item.key, s_item.value)
         if r:
             return Result(s_item)
         else:
