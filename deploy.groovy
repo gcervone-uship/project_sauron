@@ -43,7 +43,7 @@ pipeline {
   agent { label 'python3' }
 
   environment {
-        CONSUL_HTTP_ADDR = '172.28.17.4:8500'
+        CONSUL_HTTP_ADDR = 'consul.shared.mml.cloud:80'
     }
 
   stages {
