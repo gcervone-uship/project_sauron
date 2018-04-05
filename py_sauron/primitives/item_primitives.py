@@ -5,11 +5,11 @@ from collections import defaultdict
 from utils import filter_both
 
 class SauronPrimitive(object):
-    __slots__ = []
     """
     Base class for Sauron Objects. Mainly to turn things into iterables, and automatically generate
     a nice __repr__
     """
+    __slots__ = []
     def __repr__(self):
         rep = {x: getattr(self, x) for x in self.__slots__ if getattr(self, x)}
         return '{} {}'.format(self.__class__.__name__, rep)
