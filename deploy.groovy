@@ -19,6 +19,7 @@ switch(params.Swarm) {
     aws_id = "walkietalkie-prod"
     break
 }
+def consul_namespace = "${params.Swarm}/${stack_name}"
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
 def artifactory_target = "Macmillan-Product-Builds"
 def deploy_download_spec = """{
@@ -71,10 +72,28 @@ pipeline {
             """
           )
       }
-    }
+	}
+    stage('Build Data Stack'){
+      steps {
+        script {
+          if fileExists("./${repo}/data.cfn.yml") {
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+              credentialsId: "${aws_id}",
+              accessKeyVariable: 'ACCESS_KEY', 
+              secretKeyVariable: 'SECRET_KEY']]) {
+                env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
+                env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
+                env.AWS_DEFAULT_REGION="us-east-1"
+                sh "python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ./${repo}/data.cfn.yml --build-stack-name ${stack_name}-data"
+              }
+           }
+        }
+      }
+    }   
+		
     stage("Build .ENV file"){
       steps {
-        sh "python3 env_builder/env_builder.py -t consul -k ${repo}/.key -d ./.env -p ${params.Swarm}/${repo}"
+        sh "python3 env_builder/env_builder.py -t consul -k ${repo}/.key -d ./.env -p ${consul_namespace}"
       }
     }
     stage("Deploying stack to Swarm") {
@@ -114,5 +133,19 @@ pipeline {
         }
       }
     }
+    stage("Publish Endpoints to Consul"){
+      steps {
+        sh "python3 py_sauron/cfn_to_consul.py -s cfn_stack -p Outputs -k ${repo}/.key -o ${consul_namespace}"
+      }
+    }
   }
+}
+def shellCommandOutput(command) {
+    def uuid = UUID.randomUUID()
+    def filename = "cmd-${uuid}"
+    echo filename
+    sh ("${command} > ${filename}")
+    def result = readFile(filename).trim()
+    sh "rm ${filename}"
+    return result
 }
