@@ -1,4 +1,4 @@
-def stack_name = params.Stack_Name
+ def stack_name = params.Stack_Name
 def repo = params.Project
 def branch = params.Branch
 def swarm_hostname
@@ -20,8 +20,22 @@ switch(params.Swarm) {
     break
 }
 def consul_namespace = "${params.Swarm}/${stack_name}"
+
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
 def artifactory_target = "Macmillan-Product-Builds"
+
+def data_stack_name = "${stack_name}-data"
+def data_template = "./${repo}/data.cfn.yml"
+
+def default_loadbalancer_template = "./cloudformation/base.cfn.yml"
+def loadbalancer_template = "./${repo}/frontend.cfn.yml"
+def loadbalancer_stack_name = "${stack_name}-load"
+
+def frontend_stack_name = "${stack_name}-frontend"
+def frontend_template = "./${repo}/frontend.cfn.yml"
+def frontend_webpack = "./${repo}/webpack.tgz"
+
+
 def deploy_download_spec = """{
   "files": [
   {
@@ -44,7 +58,7 @@ pipeline {
   agent { label 'python3' }
 
   environment {
-        CONSUL_HTTP_ADDR = 'consul.shared.mml.cloud:80'
+        CONSUL_HTTP_ADDR = '172.28.17.4:8500'
     }
 
   stages {
@@ -73,7 +87,7 @@ pipeline {
           )
       }
 	}
-    stage('Build Data Stack'){
+    stage('Build Data Stack') {
       steps {
         script {
           if (fileExists("./${repo}/data.cfn.yml")) {
@@ -84,7 +98,8 @@ pipeline {
                 env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
                 env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
                 env.AWS_DEFAULT_REGION="us-east-1"
-                sh "python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ./${repo}/data.cfn.yml --build-stack-name ${stack_name}-data"
+
+                sh "python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ${data_template} --build-stack-name ${data_stack_name} -o ${consul_namespace}"
               }
            }
         }
@@ -121,14 +136,11 @@ pipeline {
     stage("Creating ELBs Service URLs"){
       steps {
         script {
-          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: "${aws_id}",
-            accessKeyVariable: 'ACCESS_KEY', 
-            secretKeyVariable: 'SECRET_KEY']]) {
-              env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
-              env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
-              env.AWS_DEFAULT_REGION="us-east-1"
-              sh "python3 deploy/cf_main.py load ${stack_name} ${swarm_hostname}"
+          if (fileExists(loadbalancer_template)) {
+            awsShellCommand("python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ${loadbalancer_template} --build-stack-name ${loadbalancer_stack_name} -o ${consul_namespace}")
+          }
+          else {
+            awsShellCommand("python3 deploy/cf_main.py load ${stack_name} ${swarm_hostname}")
           }
         }
       }
@@ -138,5 +150,39 @@ pipeline {
         sh "python3 py_sauron/cfn_to_consul.py -s cfn_stack -p Outputs -k ${repo}/.key -o ${consul_namespace}"
       }
     }
+    stage("Build Frontend") {
+      steps {
+        script {
+          if (fileExists(frontend_template) && fileExists(frontend_webpack)) {
+            awsShellCommand("python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ${frontend_template} --build-stack-name ${frontend_stack_name}")
+            awsShellCommand("python3 py_sauron/upload_to_s3.py --output-lookup cfn -d ${frontend_stack_name} -s ${frontend_webpack}")
+          }
+        }
+      }
+    }
   }
+}
+
+def awsShellCommand(shell_command) {
+  return script {
+    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+      credentialsId: "${aws_id}",
+      accessKeyVariable: 'ACCESS_KEY', 
+      secretKeyVariable: 'SECRET_KEY']]) {
+        env.AWS_ACCESS_KEY_ID="${ACCESS_KEY}"
+        env.AWS_SECRET_ACCESS_KEY="${SECRET_KEY}"
+        env.AWS_DEFAULT_REGION="us-east-1"
+        sh shell_command
+      }    
+  }
+}
+
+def shellCommandOutput(command) {
+    def uuid = UUID.randomUUID()
+    def filename = "cmd-${uuid}"
+    echo filename
+    sh ("${command} > ${filename}")
+    def result = readFile(filename).trim()
+    sh "rm ${filename}"
+    return result
 }
