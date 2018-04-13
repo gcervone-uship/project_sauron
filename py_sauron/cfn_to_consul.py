@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+import logging
+logging.basicConfig(level=logging.INFO)
+
 import argparse
 
 from primitives.item_primitives import Item, item_action, get_by_prefix, new_prefix

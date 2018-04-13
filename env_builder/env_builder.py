@@ -40,7 +40,7 @@ def key_parse_lines(lines, sep='='):
     Ensure that each line meets our required formatting
     This expects every line to contain a properly formatted key value pair
     '''
-    allowed_characters = re.compile(r'^[0-9A-Z\_]+$')
+    allowed_characters = re.compile(r'^[0-9A-Za-z\_]+$')
     pairs = {}
     for line in lines:
         pair = line.split(sep)
