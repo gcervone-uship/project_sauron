@@ -4,7 +4,6 @@ from consul import Consul, ConsulException
 
 from primitives.item_primitives import join_prefix, item_action, Result, Item, split_by_sep
 
-
 CONSUL_SEP = '/'
 
 
@@ -51,8 +50,14 @@ def _get_consul(s_item, conn, recurse=False):
                       exception=consul_exception)
 
     def to_item(intermediate_res):
+        print(intermediate_res)
+        try:
+            value = intermediate_res['Value'].decode()
+        except AttributeError:
+            value = ''
         return  Item(key=intermediate_res['Key'],
-                     value=intermediate_res['Value'].decode())
+                     value=value)
+    print(data)
     if data:
         if recurse:
             r_items = map(to_item, data)
