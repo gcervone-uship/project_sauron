@@ -147,7 +147,7 @@ pipeline {
     }
     stage("Publish Endpoints to Consul"){
       steps {
-        sh "python3 py_sauron/cfn_to_consul.py -s cfn_stack -p Outputs -k ${repo}/.key -o ${consul_namespace}"
+        sh "python3 py_sauron/cfn_to_consul.py -s cfn_stack -p Outputs -k ${repo}/.key -o ${consul_namespace} -n ${stack_name}"
       }
     }
     stage("Build Frontend") {
