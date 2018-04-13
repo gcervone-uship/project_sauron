@@ -139,7 +139,7 @@ def _params_from_validate(template_dict):
         else:
             param_value = None
         param_items.append(Item(key=param_key,value=param_value, prefix='Parameters'))
-    return param_items
+    return Result(param_items)
     
 
 def get_cfn_template(template_yaml):
