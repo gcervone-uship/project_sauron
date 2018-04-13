@@ -115,7 +115,7 @@ def _make_template_items(template_dict):
                                      value=value))
     return item_acc
 
-def get_cfn_template(template_yaml):
+def old_get_cfn_template(template_yaml):
     """
     Take a raw cfn template and return a result object of the template's items
     """
@@ -129,3 +129,20 @@ def get_cfn_stack(stack_name, cfn_resource=boto3.resource('cloudformation')):
     Get the Items associated with a given stack (by name or arn)
     """
     return _get_cfn_stack(stack_name, cfn_resource)
+
+def _params_from_validate(template_dict):
+    param_items = []
+    for param in template_dict['Parameters']:
+        param_key = param['ParameterKey']
+        if 'DefaultValue' in param:
+            param_value = param['DefaultValue']
+        else:
+            param_value = None
+        param_items.append(Item(key=param_key,value=param_value, prefix='Parameters'))
+    return param_items
+    
+
+def get_cfn_template(template_yaml):
+    cfn_client = boto3.client('cloudformation')
+    template_dict = cfn_client.validate_template(TemplateBody=template_yaml)
+    return _params_from_validate(template_dict)
