@@ -76,7 +76,7 @@ pipeline {
     stage('Build Data Stack'){
       steps {
         script {
-          if fileExists("./${repo}/data.cfn.yml") {
+          if (fileExists("./${repo}/data.cfn.yml")) {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
               credentialsId: "${aws_id}",
               accessKeyVariable: 'ACCESS_KEY', 
@@ -139,13 +139,4 @@ pipeline {
       }
     }
   }
-}
-def shellCommandOutput(command) {
-    def uuid = UUID.randomUUID()
-    def filename = "cmd-${uuid}"
-    echo filename
-    sh ("${command} > ${filename}")
-    def result = readFile(filename).trim()
-    sh "rm ${filename}"
-    return result
 }
