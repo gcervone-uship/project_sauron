@@ -161,7 +161,7 @@ pipeline {
       steps {
         script {
           if (fileExists(frontend_template)) {
-            awsShellCommand("python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ${frontend_template} --build-stack-name ${frontend_stack_name}")
+            awsShellCommand("python3 py_sauron/cfn_to_consul.py -p ${consul_namespace} --build-template ${frontend_template} --build-stack-name ${frontend_stack_name} -o ${consul_namespace}")
           }
             awsShellCommand("python3 py_sauron/upload_to_s3.py --output-lookup cfn -d ${frontend_stack_name} -s ${frontend_webpack}")
           if (fileExists(frontend_template) && fileExists(frontend_webpack)) {
