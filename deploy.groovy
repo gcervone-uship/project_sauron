@@ -151,7 +151,7 @@ pipeline {
     }
     stage("Publish Endpoints to Consul"){
       steps {
-        sh "python3 py_sauron/cfn_to_consul.py  -n ${stack_name} -s cfn_stack -p Outputs -o ${consul_namespace}"
+        sh "python3 py_sauron/cfn_to_consul.py  -n ${stack_name} -s docker-cfn --build-template ${dockerfile} -p Outputs -o ${consul_namespace}"
       }
     }
     stage("Build Frontend") {
