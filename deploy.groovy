@@ -1,25 +1,29 @@
- def stack_name = params.Stack_Name
+def stack_name = params.Stack_Name
 def repo = params.Project
 def branch = params.Branch
 def swarm_hostname
+def namespace_root
 switch(params.Swarm) {
-  case "dev":
-    swarm_hostname = "swarm-dev.mldev.cloud"
-    ssh_agent_id = "docker-dev-swarm"
-    aws_id = "ml-jenkins-dev"
+  case "prod":
+    swarm_hostname = "swarm-prod.mldev.cloud"
+    ssh_agent_id = "docker-prod-swarm"
+    aws_id = "walkietalkie-prod"
+    namespace_root = "prod"
     break
   case "integration":
     swarm_hostname = "swarm-int.mldev.cloud"
     ssh_agent_id = "docker-dev-swarm"
     aws_id = "ml-jenkins-dev"
+    namespace_root = "integration"
     break
   default:
-    swarm_hostname = "swarm-prod.mldev.cloud"
-    ssh_agent_id = "docker-prod-swarm"
-    aws_id = "walkietalkie-prod"
+    swarm_hostname = "swarm-dev.mldev.cloud"
+    ssh_agent_id = "docker-dev-swarm"
+    aws_id = "ml-jenkins-dev"
+    namespace_root = "dev"
     break
 }
-def consul_namespace = "${params.Swarm}/${stack_name}"
+def consul_namespace = "${namespace_root}/${stack_name}/${repo}"
 
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
 def artifactory_target = "Macmillan-Product-Builds"
