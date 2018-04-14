@@ -43,6 +43,7 @@ def key_parse_lines(lines, sep='='):
     allowed_characters = re.compile(r'^[0-9A-Za-z\_]+$')
     pairs = {}
     for line in lines:
+        print(line)
         pair = line.split(sep)
         if len(pair) != 2:
             raise KeyError('Error parsing line:\n{}'.format(line))

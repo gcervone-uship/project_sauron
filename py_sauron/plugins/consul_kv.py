@@ -21,14 +21,11 @@ def is_consul_prefix(s_item):
 
 def _put_consul(s_item, conn):
     n_item = join_prefix(s_item, '/')
-    try:
-        raw = conn.kv.put(n_item.key, s_item.value)
-        if raw:
-            return Result(s_item)
-        return Result(invalid=s_item)
-    except (ConsulException, socket.error) as consul_exception:
-        return Result(invalid=s_item,
-                      exception=consul_exception)
+    raw = conn.kv.put(n_item.key, s_item.value)
+    if raw:
+        return Result(s_item)
+    return Result(invalid=s_item)
+
 
 def _get_consul(s_item, conn, recurse=False):
     """
@@ -43,11 +40,7 @@ def _get_consul(s_item, conn, recurse=False):
     else:
         c_key = join_prefix(s_item, CONSUL_SEP).key
 
-    try:
-        index, data = conn.kv.get(c_key, recurse=recurse)
-    except (ConsulException, socket.error) as consul_exception:
-        return Result(invalid=s_item,
-                      exception=consul_exception)
+    index, data = conn.kv.get(c_key, recurse=recurse)
 
     def to_item(intermediate_res):
         print(intermediate_res)
@@ -57,7 +50,6 @@ def _get_consul(s_item, conn, recurse=False):
             value = ''
         return  Item(key=intermediate_res['Key'],
                      value=value)
-    print(data)
     if data:
         if recurse:
             r_items = map(to_item, data)

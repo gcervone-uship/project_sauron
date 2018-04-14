@@ -32,7 +32,7 @@ def data_stack_name = "${stack_name}-data"
 def data_template = "./${repo}/data.cfn.yml"
 
 def default_loadbalancer_template = "./cloudformation/base.cfn.yml"
-def loadbalancer_template = "./${repo}/frontend.cfn.yml"
+def loadbalancer_template = "./${repo}/load.cfn.yml"
 def loadbalancer_stack_name = "${stack_name}-load"
 
 def frontend_stack_name = "${stack_name}-frontend"
@@ -151,7 +151,7 @@ pipeline {
     }
     stage("Publish Endpoints to Consul"){
       steps {
-        sh "python3 py_sauron/cfn_to_consul.py -s cfn_stack -p Outputs -k ${repo}/.key -o ${consul_namespace} -n ${stack_name}"
+        sh "python3 py_sauron/cfn_to_consul.py  -n ${stack_name} -s cfn_stack -p Outputs -o ${consul_namespace}"
       }
     }
     stage("Build Frontend") {
