@@ -38,7 +38,7 @@ def default_loadbalancer_template = "./cloudformation/base.cfn.yml"
 def loadbalancer_template = "./${repo}/load.cfn.yml"
 def loadbalancer_stack_name = "${stack_name}-load"
 
-def frontend_stack_name = "${stack_name}-frontend"
+def frontend_stack_name = "${repo}-frontend"
 def frontend_template = "./${repo}/frontend.cfn.yml"
 def frontend_webpack = "./${repo}/webpack.tgz"
 
