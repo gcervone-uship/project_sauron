@@ -23,7 +23,10 @@ switch(params.Swarm) {
     namespace_root = "dev"
     break
 }
+
 def consul_namespace = "${namespace_root}/${stack_name}/${repo}"
+
+def dockerfile = "./docker-compose-swarm.yml"
 
 def artifactory_server = Artifactory.server 'Macmillan-Artifactory'
 def artifactory_target = "Macmillan-Product-Builds"
