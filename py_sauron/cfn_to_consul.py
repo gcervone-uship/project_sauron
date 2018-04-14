@@ -11,8 +11,8 @@ from primitives.item_primitives import operate, fill_values, drop_prefix
 from plugins.cloudformation import get_cfn_stack, create_cfn_stack, get_cfn_template
 from plugins.consul_kv import put_consul, get_consul_by_prefix, is_consul_prefix
 
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG)
 
 class RequireSourceName(argparse.Action):
     '''
