@@ -72,8 +72,6 @@ pipeline {
     stage('Get Artifacts') {
       steps {
         script {
-          sh "rm -fR *"
-          artifactory_server.download(deploy_download_spec)
           artifactory_server.download(repo_download_spec)
           sh (
             """mv ml_unified_pipeline/master/* ./
