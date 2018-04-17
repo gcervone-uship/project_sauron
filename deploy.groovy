@@ -74,8 +74,7 @@ pipeline {
         script {
           artifactory_server.download(repo_download_spec)
           sh (
-            """mv ml_unified_pipeline/master/* ./
-                mv ./${repo}/${branch}/.key ./${repo}/
+            """ mv ./${repo}/${branch}/.key ./${repo}/
                 mv ./${repo}/${branch}/.images ./${repo}/
                 mv ./${repo}/${branch}/* ./${repo}/
             """
