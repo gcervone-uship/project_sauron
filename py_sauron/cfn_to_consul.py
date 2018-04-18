@@ -3,6 +3,7 @@
 import yaml
 import logging
 from itertools import chain
+import os
 
 import argparse
 
@@ -11,8 +12,16 @@ from primitives.item_primitives import operate, fill_values, drop_prefix
 from plugins.cloudformation import get_cfn_stack, create_cfn_stack, get_cfn_template
 from plugins.consul_kv import put_consul, get_consul_by_prefix, is_consul_prefix
 
-logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
+try:
+    debug = os.environ['SAURON_LOGLEVEL']
+except KeyError:
+    debug = 'ERROR'
+if debug == 'DEBUG':
+    logging.basicConfig(level=logging.DEBUG)
+elif debug == 'INFO':
+    logging.basicConfig(level=logging.INFO)
+else:
+    logging.basicConfig(level=logging.ERROR)
 
 class RequireSourceName(argparse.Action):
     '''
@@ -99,11 +108,8 @@ def build_stack(build_name, raw_template, source_items=[]):
     raw = create_cfn_stack(build_name, raw_template, filled)
     return raw
 
-def get_services_from_docker(template_file):
-    parsed = yaml.load(template_file)
-    services = [x for x in parsed['services']]
-    logging.debug('Services {}'.format(services))
-    return services
+def parse_composefile(template_file):
+    return yaml.load(template_file)
 
 def construct_stack_names(base_name, service):
     #stack_name =  ['{}-{}'.format(base_name, service) for service in services]
@@ -123,6 +129,14 @@ def handle_multi_stacks(stack_names, src_prefix = 'Outputs'):
     logging.debug('Handle multi_stacks result_items: {}'.format(result_items))
     return chain.from_iterable(result_items)
 
+def does_service_have_ports(service_name, service_dict):
+    try:
+        len(service_dict['ports']) > 0
+        return True
+    except KeyError:
+        return False
+    
+
 def get_key(items, key):
     return filter(lambda x: x.key == key, items)
 
@@ -130,8 +144,10 @@ def prefix_to_key(items):
     return map(lambda x: x.clone(key=x.prefix, drop=['prefix']), items)
 
 def do_docker_cfn(dockerfile, base_name):
-    services = get_services_from_docker(dockerfile)
-    stack_names = map(lambda x: construct_stack_names(base_name, x), services)
+    parsed = parse_composefile(dockerfile)
+    has_ports = filter(lambda x: does_service_have_ports(*x), parsed['services'].items())
+    service_names = map(lambda x: x[0], has_ports)
+    stack_names = map(lambda x: construct_stack_names(base_name, x), service_names)
     all_stack_items = list(handle_multi_stacks(stack_names))
     only_urls = get_key(all_stack_items, 'StackUrl')
     return prefix_to_key(only_urls)
@@ -181,7 +197,7 @@ def main():
         """
         source_items = list(base_source_items)
 
-    logging.debug('Source Items: {}'.format(source_items))
+    logging.info('Source Items: {}'.format(source_items))
     # Update the items with the new prefix if required
     if args.destination_prefix:
         dest_prefix = [lambda x: new_prefix(x, args.destination_prefix)]
