@@ -14,7 +14,7 @@ from plugins.consul_kv import get_consul
 
 
 BUCKET_LOOKUP_KEY = 'S3Bucket'
-
+WEBPACK_ACL = 'public-read'
 
 def valid_path(path_string):
     new_path = Path(path_string).expanduser()
@@ -95,7 +95,7 @@ def make_s3_uploader(bucket_name, upload_prefix=None):
         path_with_keys = starmap(lambda l, r: (l, dest_prefix / Path(r)), to_upload)
         for path, key in path_with_keys:
             print('Uploading: {} to {} {}'.format(path, key, dest_bucket))
-            dest_bucket.upload_file(str(path), str(key))
+            dest_bucket.upload_file(str(path), str(key), ExtraArgs={'ACL': WEBPACK_ACL})
     return upload
 
 def main():
