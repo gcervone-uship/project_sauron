@@ -72,6 +72,7 @@ pipeline {
     stage('Get Artifacts') {
       steps {
         script {
+          currentBuild.displayName = "${JOB_NAME} ${stack_name}-${repo}"
           artifactory_server.download(repo_download_spec)
           sh (
             """ mv ./${repo}/${branch}/.key ./${repo}/
